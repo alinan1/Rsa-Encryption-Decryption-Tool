@@ -9,13 +9,16 @@ PUB_PATH  = "public_key.pem"
 
 def keys():
     #Generate 2048-bit RSA private key 
+    if os.path.exists(PRIV_PATH) and os.path.exists(PUB_PATH):
+        print(f"\nKey files {PRIV_PATH} and {PUB_PATH} already exist. Delete them first if you want to regenerate keys.")
+        return  
+
     priv = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     #save priv key to pem file
         #encoding ->
         #format ->
-        #encryptionAlgo ->
-
+        #encryptionAlgo -> NoEncryption() means store unencrypted
     with open(PRIV_PATH, "wb") as file:
         file.write(priv.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -63,25 +66,30 @@ def main():
     #generate keys
     keys()
 
+    print("\n/--- RSA Encryption / Decryption Demo ---/")
     # Encrypt 
     msg = input("Input message to encrypt: ") # ask user for input
     encrypted_msg = encrypt(msg.encode("utf-8")) # Encode msg (text -> plaintext bytes) and then encrypt the message (plaintext bytes -> ciphortext bytes)
     ct_b64 = base64.b64encode(encrypted_msg).decode("ascii") # encode the ciphortext bytes into base64 (actual text "ascii") to be used to copy and paste later for decryption
-    print("\nEncrypted version (Base64):")
-    print(ct_b64)
+    print("\nEncrypted version (Base64): " + ct_b64)
 
     # Decrypt 
     print("\nNow Decrypt!!!")
-    b64_input = input("Paste the Base64 characters: ").strip() # paste the base64 text 
-    try:
-        ct_bytes = base64.b64decode(b64_input, validate=True) # decode base64 packaging back to ciphortext bytes 
-        plaintext = decrypt(ct_bytes).decode("utf-8", errors="strict") # decrypt (ciphortext bytes -> plaintext bytes) THEN DECODE (plaintext bytes -> TEXT)
-        print("\nDecrypted message: ") # print message (should match the original word you wanted to encrypt)
-        print(plaintext)
-        
-    except Exception as e: #if base64 is wrong due to error (wrong copy paste etc...) display message to retry
-        print("\nCould not decrypt. Make sure you pasted the exact Base64 ciphertext created with the matching keys.")
-        print(f"(Error: {e})")
+
+    while True:
+        b64_input = input("Paste the Base64 characters (single line, or 'q' to quit): ").strip()
+        if b64_input.strip().lower() == "q":
+            print("Exiting decryption...")
+            break
+        try:
+            ct_bytes = base64.b64decode(b64_input, validate=True)
+            plaintext = decrypt(ct_bytes).decode("utf-8", errors="strict")
+            print("\nDecrypted message:", plaintext)
+            break
+        except Exception as e:
+            print("\nCould not decrypt. Make sure you pasted the exact Base64 ciphertext created with the matching keys.")
+            print(f"Error details: {e}\n")
+            continue  # make the retry explicit
 
 if __name__ == "__main__":
     main()
